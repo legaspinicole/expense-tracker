@@ -1,64 +1,900 @@
-```python
 import tkinter as tk
+from tkinter import messagebox, simpledialog
+
+
+# ============================================================
+# IMPORT EXPENSE FUNCTIONS
+# ============================================================
+
+from expense import (
+    add_expense,
+    edit_expense,
+    delete_expense,
+    get_expenses
+)
+
+
+# ============================================================
+# IMPORT CATEGORY FUNCTIONS
+# ============================================================
+
+from category import (
+    get_categories,
+    add_category,
+    edit_category,
+    delete_category
+)
 
 
 # ============================================================
 # PROCEDURAL DATA STORES
 # ============================================================
 
-categories = [
-    "Category 1",
-    "Category 2",
-    "Category 3",
-    "Category 4"
-]
-
 category_colors = [
     "#E5732F",
     "#5D9CEC",
-    "#505A3E",
-    "#2B62D9"
+    "#64F012",
+    "#2B62D9",
+    "#FF6384",
+    "#D509F0",
+    "#FF9F40",
+    "#EAFA0E",
+    "#36A2EB",  
+    "#4BC0C0",  
+    "#9966FF",  
+    "#FFCD56",  
+    "#FF8A65",  
+    "#66BB6A",  
+    "#AB47BC",  
+    "#26A69A",  
+    "#EC407A",  
+    "#5C6BC0",  
+    "#78909C"
 ]
 
-transactions = [
-    {
-        "name": "Transaction 1",
-        "cat": "Category 1",
-        "date": "09/01/2026",
-        "amount": "- P 180.00"
-    },
-    {
-        "name": "Transaction 2",
-        "cat": "Category 2",
-        "date": "09/01/2026",
-        "amount": "- P 180.00"
-    },
-    {
-        "name": "Transaction 3",
-        "cat": "Category 3",
-        "date": "09/01/2026",
-        "amount": "- P 180.00"
-    }
-]
+
+# ============================================================
+# PROCEDURAL CALCULATION FUNCTIONS
+# ============================================================
+
+def calculate_total():
+    """Calculates the total amount of all expenses."""
+
+    total = 0
+
+    for expense in get_expenses():
+        total += expense["amount"]
+
+    return total
+
+
+def calculate_category_total(category):
+    """Calculates the total spending for one category."""
+
+    total = 0
+
+    for expense in get_expenses():
+
+        if expense["category"] == category:
+            total += expense["amount"]
+
+    return total
+
+
+# ============================================================
+# PROCEDURAL GUI UPDATE FUNCTIONS
+# ============================================================
+
+def refresh_gui():
+    """Refreshes all information displayed in the GUI."""
+
+    update_total()
+    update_category_legend()
+    update_category_bar()
+    update_transactions()
+
+
+def update_total():
+    """Updates the total spending displayed on the screen."""
+
+    total = calculate_total()
+
+    label_amount.config(
+        text=f"₱ {total:,.2f}"
+    )
+
+
+def update_category_legend():
+    """Updates the category legend."""
+
+    for widget in legend_frame.winfo_children():
+        widget.destroy()
+
+    categories = get_categories()
+
+    for index in range(len(categories)):
+
+        color = category_colors[
+            index % len(category_colors)
+        ]
+
+        color_box = tk.Label(
+            legend_frame,
+            bg=color,
+            width=2,
+            height=1
+        )
+
+        color_box.pack(
+            side=tk.LEFT,
+            padx=(0, 4)
+        )
+
+        category_label = tk.Label(
+            legend_frame,
+            text=categories[index],
+            font=("Arial", 9),
+            bg="#FFFFFF"
+        )
+
+        category_label.pack(
+            side=tk.LEFT,
+            padx=(0, 12)
+        )
+
+
+def update_category_bar():
+    """Updates the category spending bar."""
+
+    for widget in bar_container.winfo_children():
+        widget.destroy()
+
+    categories = get_categories()
+    total = calculate_total()
+
+    if total == 0:
+        return
+
+    current_x = 0.0
+
+    for index in range(len(categories)):
+
+        category_total = calculate_category_total(
+            categories[index]
+        )
+
+        segment_width = category_total / total
+
+        if segment_width <= 0:
+            continue
+
+        color = category_colors[
+            index % len(category_colors)
+        ]
+
+        segment = tk.Frame(
+            bar_container,
+            bg=color
+        )
+
+        segment.place(
+            relx=current_x,
+            rely=0,
+            relwidth=segment_width,
+            relheight=1.0
+        )
+
+        current_x += segment_width
+
+
+def update_transactions():
+    """Updates the Recent Transactions section."""
+
+    for widget in transactions_container.winfo_children():
+        widget.destroy()
+
+    expenses = get_expenses()
+
+    if len(expenses) == 0:
+
+        empty_label = tk.Label(
+            transactions_container,
+            text="No transactions yet.",
+            font=("Arial", 10),
+            fg="#777777",
+            bg="#FFFFFF"
+        )
+
+        empty_label.pack(
+            anchor="w",
+            pady=10
+        )
+
+        return
+
+    for index, expense in enumerate(expenses):
+
+        create_transaction(
+            transactions_container,
+            expense,
+            index
+        )
 
 
 # ============================================================
 # PROCEDURAL ACTION FUNCTIONS
 # ============================================================
 
-def add_expense():
-    """Temporary function for the Add Expense button."""
-    print("Add Expense selected")
+def open_add_expense():
+    """Opens the Add Expense window."""
+
+    window = tk.Toplevel(root)
+    window.title("Add Expense")
+    window.geometry("400x400")
+    window.configure(bg="#F6F3E6")
+    window.resizable(False, False)
+
+    title = tk.Label(
+        window,
+        text="Add Expense",
+        font=("Arial", 16, "bold"),
+        bg="#F6F3E6"
+    )
+
+    title.pack(
+        pady=(20, 15)
+    )
+
+    # Description
+    tk.Label(
+        window,
+        text="Description",
+        bg="#F6F3E6",
+        font=("Arial", 10)
+    ).pack(
+        anchor="w",
+        padx=30
+    )
+
+    description_entry = tk.Entry(
+        window,
+        font=("Arial", 10)
+    )
+
+    description_entry.pack(
+        fill=tk.X,
+        padx=30,
+        pady=(5, 15)
+    )
+
+    # Amount
+    tk.Label(
+        window,
+        text="Amount",
+        bg="#F6F3E6",
+        font=("Arial", 10)
+    ).pack(
+        anchor="w",
+        padx=30
+    )
+
+    amount_entry = tk.Entry(
+        window,
+        font=("Arial", 10)
+    )
+
+    amount_entry.pack(
+        fill=tk.X,
+        padx=30,
+        pady=(5, 15)
+    )
+
+    # Category
+    tk.Label(
+        window,
+        text="Category",
+        bg="#F6F3E6",
+        font=("Arial", 10)
+    ).pack(
+        anchor="w",
+        padx=30
+    )
+
+    category_var = tk.StringVar()
+
+    categories = get_categories()
+
+    if categories:
+        category_var.set(categories[0])
+
+    category_menu = tk.OptionMenu(
+        window,
+        category_var,
+        *categories
+    )
+
+    category_menu.config(
+        font=("Arial", 10),
+        bg="#FFFFFF"
+    )
+
+    category_menu.pack(
+        fill=tk.X,
+        padx=30,
+        pady=(5, 15)
+    )
+
+    # Date
+    tk.Label(
+        window,
+        text="Date",
+        bg="#F6F3E6",
+        font=("Arial", 10)
+    ).pack(
+        anchor="w",
+        padx=30
+    )
+
+    date_entry = tk.Entry(
+        window,
+        font=("Arial", 10)
+    )
+
+    date_entry.pack(
+        fill=tk.X,
+        padx=30,
+        pady=(5, 20)
+    )
+
+    def save_expense():
+        """Saves the new expense."""
+
+        description = description_entry.get().strip()
+        amount = amount_entry.get().strip()
+        category = category_var.get()
+        date = date_entry.get().strip()
+
+        if not description:
+            messagebox.showerror(
+                "Invalid Input",
+                "Please enter a description."
+            )
+            return
+
+        if not amount:
+            messagebox.showerror(
+                "Invalid Input",
+                "Please enter an amount."
+            )
+            return
+
+        try:
+            amount = float(amount)
+
+        except ValueError:
+            messagebox.showerror(
+                "Invalid Input",
+                "Amount must be a number."
+            )
+            return
+
+        if amount <= 0:
+            messagebox.showerror(
+                "Invalid Input",
+                "Amount must be greater than zero."
+            )
+            return
+
+        if not category:
+            messagebox.showerror(
+                "Invalid Input",
+                "Please select a category."
+            )
+            return
+
+        if not date:
+            messagebox.showerror(
+                "Invalid Input",
+                "Please enter a date."
+            )
+            return
+
+        add_expense(
+            amount,
+            category,
+            description,
+            date
+        )
+
+        refresh_gui()
+
+        window.destroy()
+
+    save_button = tk.Button(
+        window,
+        text="Save Expense",
+        font=("Arial", 10, "bold"),
+        bg="#E5732F",
+        fg="#FFFFFF",
+        bd=0,
+        padx=20,
+        pady=8,
+        command=save_expense
+    )
+
+    save_button.pack()
+
+
+def open_edit_expense(index):
+    """Opens the Edit Expense window."""
+
+    expenses = get_expenses()
+
+    if not (0 <= index < len(expenses)):
+        return
+
+    expense = expenses[index]
+
+    window = tk.Toplevel(root)
+    window.title("Edit Expense")
+    window.geometry("400x400")
+    window.configure(bg="#F6F3E6")
+    window.resizable(False, False)
+
+    title = tk.Label(
+        window,
+        text="Edit Expense",
+        font=("Arial", 16, "bold"),
+        bg="#F6F3E6"
+    )
+
+    title.pack(
+        pady=(20, 15)
+    )
+
+    # Description
+    tk.Label(
+        window,
+        text="Description",
+        bg="#F6F3E6",
+        font=("Arial", 10)
+    ).pack(
+        anchor="w",
+        padx=30
+    )
+
+    description_entry = tk.Entry(
+        window,
+        font=("Arial", 10)
+    )
+
+    description_entry.insert(
+        0,
+        expense["description"]
+    )
+
+    description_entry.pack(
+        fill=tk.X,
+        padx=30,
+        pady=(5, 15)
+    )
+
+    # Amount
+    tk.Label(
+        window,
+        text="Amount",
+        bg="#F6F3E6",
+        font=("Arial", 10)
+    ).pack(
+        anchor="w",
+        padx=30
+    )
+
+    amount_entry = tk.Entry(
+        window,
+        font=("Arial", 10)
+    )
+
+    amount_entry.insert(
+        0,
+        str(expense["amount"])
+    )
+
+    amount_entry.pack(
+        fill=tk.X,
+        padx=30,
+        pady=(5, 15)
+    )
+
+    # Category
+    tk.Label(
+        window,
+        text="Category",
+        bg="#F6F3E6",
+        font=("Arial", 10)
+    ).pack(
+        anchor="w",
+        padx=30
+    )
+
+    category_var = tk.StringVar()
+
+    categories = get_categories()
+
+    category_var.set(
+        expense["category"]
+    )
+
+    category_menu = tk.OptionMenu(
+        window,
+        category_var,
+        *categories
+    )
+
+    category_menu.config(
+        font=("Arial", 10),
+        bg="#FFFFFF"
+    )
+
+    category_menu.pack(
+        fill=tk.X,
+        padx=30,
+        pady=(5, 15)
+    )
+
+    # Date
+    tk.Label(
+        window,
+        text="Date",
+        bg="#F6F3E6",
+        font=("Arial", 10)
+    ).pack(
+        anchor="w",
+        padx=30
+    )
+
+    date_entry = tk.Entry(
+        window,
+        font=("Arial", 10)
+    )
+
+    date_entry.insert(
+        0,
+        expense["date"]
+    )
+
+    date_entry.pack(
+        fill=tk.X,
+        padx=30,
+        pady=(5, 20)
+    )
+
+    def save_changes():
+        """Saves the edited expense."""
+
+        description = description_entry.get().strip()
+        amount = amount_entry.get().strip()
+        category = category_var.get()
+        date = date_entry.get().strip()
+
+        if not description:
+            messagebox.showerror(
+                "Invalid Input",
+                "Please enter a description."
+            )
+            return
+
+        try:
+            amount = float(amount)
+
+        except ValueError:
+            messagebox.showerror(
+                "Invalid Input",
+                "Amount must be a number."
+            )
+            return
+
+        if amount <= 0:
+            messagebox.showerror(
+                "Invalid Input",
+                "Amount must be greater than zero."
+            )
+            return
+
+        if not category:
+            messagebox.showerror(
+                "Invalid Input",
+                "Please select a category."
+            )
+            return
+
+        if not date:
+            messagebox.showerror(
+                "Invalid Input",
+                "Please enter a date."
+            )
+            return
+
+        edit_expense(
+            index,
+            amount,
+            category,
+            description,
+            date
+        )
+
+        refresh_gui()
+
+        window.destroy()
+
+    save_button = tk.Button(
+        window,
+        text="Save Changes",
+        font=("Arial", 10, "bold"),
+        bg="#E5732F",
+        fg="#FFFFFF",
+        bd=0,
+        padx=20,
+        pady=8,
+        command=save_changes
+    )
+
+    save_button.pack()
+
+
+def delete_transaction(index):
+    """Deletes an expense."""
+
+    expenses = get_expenses()
+
+    if not (0 <= index < len(expenses)):
+        return
+
+    expense = expenses[index]
+
+    confirm = messagebox.askyesno(
+        "Delete Expense",
+        f"Delete '{expense['description']}'?"
+    )
+
+    if confirm:
+        delete_expense(index)
+
+        refresh_gui()
 
 
 def open_categories():
-    """Temporary function for the Category button."""
-    print("Category selected")
+    """Opens the Category Management window."""
 
+    window = tk.Toplevel(root)
+    window.title("Categories")
+    window.geometry("400x450")
+    window.configure(bg="#F6F3E6")
+    window.resizable(False, False)
 
-def edit_transaction(transaction):
-    """Temporary function for editing a transaction."""
-    print("Edit selected:", transaction["name"])
+    title = tk.Label(
+        window,
+        text="Categories",
+        font=("Arial", 16, "bold"),
+        bg="#F6F3E6"
+    )
+
+    title.pack(
+        pady=(20, 15)
+    )
+
+    category_listbox = tk.Listbox(
+        window,
+        font=("Arial", 10),
+        height=12
+    )
+
+    category_listbox.pack(
+        fill=tk.BOTH,
+        expand=True,
+        padx=30
+    )
+
+    def refresh_category_list():
+
+        category_listbox.delete(
+            0,
+            tk.END
+        )
+
+        for category in get_categories():
+
+            category_listbox.insert(
+                tk.END,
+                category
+            )
+
+    refresh_category_list()
+
+    # --------------------------------------------------------
+    # ADD CATEGORY
+    # --------------------------------------------------------
+
+    def add_new_category():
+
+        category = tk.simpledialog.askstring(
+            "Add Category",
+            "Enter category name:",
+            parent=window
+        )
+
+        if category is None:
+            return
+
+        if add_category(category):
+
+            refresh_category_list()
+            refresh_gui()
+
+        else:
+
+            messagebox.showerror(
+                "Invalid Category",
+                "Category is empty or already exists."
+            )
+
+    # --------------------------------------------------------
+    # EDIT CATEGORY
+    # --------------------------------------------------------
+
+    def edit_selected_category():
+
+        selection = category_listbox.curselection()
+
+        if not selection:
+
+            messagebox.showwarning(
+                "No Selection",
+                "Please select a category first."
+            )
+
+            return
+
+        index = selection[0]
+
+        new_category = tk.simpledialog.askstring(
+            "Edit Category",
+            "Enter new category name:",
+            parent=window
+        )
+
+        if new_category is None:
+            return
+
+        result = edit_category(
+            index,
+            new_category
+        )
+
+        if result is None:
+
+            messagebox.showerror(
+                "Invalid Category",
+                "Category is empty or already exists."
+            )
+
+            return
+
+        old_category, new_category = result
+
+        # Update existing expenses using the old category
+        for expense in get_expenses():
+
+            if expense["category"] == old_category:
+
+                expense["category"] = new_category
+
+        refresh_category_list()
+        refresh_gui()
+
+    # --------------------------------------------------------
+    # DELETE CATEGORY
+    # --------------------------------------------------------
+
+    def delete_selected_category():
+
+        selection = category_listbox.curselection()
+
+        if not selection:
+
+            messagebox.showwarning(
+                "No Selection",
+                "Please select a category first."
+            )
+
+            return
+
+        index = selection[0]
+
+        categories = get_categories()
+
+        selected_category = categories[index]
+
+        # Prevent deleting a category currently being used
+        for expense in get_expenses():
+
+            if expense["category"] == selected_category:
+
+                messagebox.showerror(
+                    "Cannot Delete",
+                    "This category is being used by an expense."
+                )
+
+                return
+
+        confirm = messagebox.askyesno(
+            "Delete Category",
+            f"Delete '{selected_category}'?"
+        )
+
+        if confirm:
+
+            delete_category(index)
+
+            refresh_category_list()
+            refresh_gui()
+
+    # --------------------------------------------------------
+    # CATEGORY BUTTONS
+    # --------------------------------------------------------
+
+    button_frame = tk.Frame(
+        window,
+        bg="#F6F3E6"
+    )
+
+    button_frame.pack(
+        fill=tk.X,
+        padx=30,
+        pady=15
+    )
+
+    add_button = tk.Button(
+        button_frame,
+        text="Add",
+        font=("Arial", 9, "bold"),
+        command=add_new_category
+    )
+
+    add_button.pack(
+        side=tk.LEFT,
+        expand=True,
+        fill=tk.X,
+        padx=(0, 5)
+    )
+
+    edit_button = tk.Button(
+        button_frame,
+        text="Edit",
+        font=("Arial", 9, "bold"),
+        command=edit_selected_category
+    )
+
+    edit_button.pack(
+        side=tk.LEFT,
+        expand=True,
+        fill=tk.X,
+        padx=5
+    )
+
+    delete_button = tk.Button(
+        button_frame,
+        text="Delete",
+        font=("Arial", 9, "bold"),
+        command=delete_selected_category
+    )
+
+    delete_button.pack(
+        side=tk.LEFT,
+        expand=True,
+        fill=tk.X,
+        padx=(5, 0)
+    )
 
 
 # ============================================================
@@ -82,8 +918,8 @@ def create_header(parent):
 
     logo_text = tk.Label(
         header,
-        text="(LOGO)",
-        font=("Arial", 20, "bold"),
+        text="PERSONAL EXPENSE TRACKER",
+        font=("Arial", 18, "bold"),
         bg="#E5732F",
         fg="#000000"
     )
@@ -101,6 +937,10 @@ def create_header(parent):
 
 def create_total_card(parent):
     """Creates the total spending card."""
+
+    global label_amount
+    global legend_frame
+    global bar_container
 
     card_total = tk.Frame(
         parent,
@@ -128,7 +968,7 @@ def create_total_card(parent):
 
     label_amount = tk.Label(
         card_total,
-        text="18,000",
+        text="₱ 0.00",
         font=("Arial", 30, "bold"),
         bg="#FFFFFF"
     )
@@ -138,20 +978,12 @@ def create_total_card(parent):
         pady=(0, 10)
     )
 
-    create_category_legend(card_total)
-
-    create_category_bar(card_total)
-
-
-# ============================================================
-# CATEGORY LEGEND
-# ============================================================
-
-def create_category_legend(parent):
-    """Creates the category color legend."""
+    # --------------------------------------------------------
+    # CATEGORY LEGEND
+    # --------------------------------------------------------
 
     legend_frame = tk.Frame(
-        parent,
+        card_total,
         bg="#FFFFFF"
     )
 
@@ -160,42 +992,12 @@ def create_category_legend(parent):
         pady=(0, 10)
     )
 
-    for index in range(len(categories)):
-
-        color_box = tk.Label(
-            legend_frame,
-            bg=category_colors[index],
-            width=2,
-            height=1
-        )
-
-        color_box.pack(
-            side=tk.LEFT,
-            padx=(0, 4)
-        )
-
-        category_label = tk.Label(
-            legend_frame,
-            text=categories[index],
-            font=("Arial", 9),
-            bg="#FFFFFF"
-        )
-
-        category_label.pack(
-            side=tk.LEFT,
-            padx=(0, 12)
-        )
-
-
-# ============================================================
-# CATEGORY SPENDING BAR
-# ============================================================
-
-def create_category_bar(parent):
-    """Creates the multi-colored category spending bar."""
+    # --------------------------------------------------------
+    # CATEGORY BAR
+    # --------------------------------------------------------
 
     bar_container = tk.Frame(
-        parent,
+        card_total,
         height=12,
         bg="#E0E0E0"
     )
@@ -206,37 +1008,12 @@ def create_category_bar(parent):
 
     bar_container.pack_propagate(False)
 
-    segment_widths = [
-        0.35,
-        0.25,
-        0.20,
-        0.20
-    ]
-
-    current_x = 0.0
-
-    for index in range(len(segment_widths)):
-
-        segment = tk.Frame(
-            bar_container,
-            bg=category_colors[index]
-        )
-
-        segment.place(
-            relx=current_x,
-            rely=0,
-            relwidth=segment_widths[index],
-            relheight=1.0
-        )
-
-        current_x += segment_widths[index]
-
 
 # ============================================================
 # TRANSACTION ROW
 # ============================================================
 
-def create_transaction(parent, transaction):
+def create_transaction(parent, expense, index):
     """Creates one transaction row."""
 
     row = tk.Frame(
@@ -249,7 +1026,9 @@ def create_transaction(parent, transaction):
         pady=6
     )
 
+    # --------------------------------------------------------
     # Transaction details
+    # --------------------------------------------------------
 
     details = tk.Frame(
         row,
@@ -262,7 +1041,7 @@ def create_transaction(parent, transaction):
 
     transaction_name = tk.Label(
         details,
-        text=transaction["name"],
+        text=expense["description"],
         font=("Arial", 10, "bold"),
         bg="#FFFFFF"
     )
@@ -273,7 +1052,7 @@ def create_transaction(parent, transaction):
 
     transaction_sub = tk.Label(
         details,
-        text=f"{transaction['cat']}  |  {transaction['date']}",
+        text=f"{expense['category']}  |  {expense['date']}",
         font=("Arial", 8),
         fg="#777777",
         bg="#FFFFFF"
@@ -283,7 +1062,9 @@ def create_transaction(parent, transaction):
         anchor="w"
     )
 
-    # Transaction amount and edit button
+    # --------------------------------------------------------
+    # Transaction amount and buttons
+    # --------------------------------------------------------
 
     actions = tk.Frame(
         row,
@@ -296,7 +1077,7 @@ def create_transaction(parent, transaction):
 
     amount = tk.Label(
         actions,
-        text=transaction["amount"],
+        text=f"- ₱ {expense['amount']:,.2f}",
         font=("Arial", 10, "bold"),
         bg="#FFFFFF"
     )
@@ -313,10 +1094,25 @@ def create_transaction(parent, transaction):
         bd=1,
         relief=tk.SOLID,
         bg="#F5F5F5",
-        command=lambda t=transaction: edit_transaction(t)
+        command=lambda i=index: open_edit_expense(i)
     )
 
     edit_button.pack(
+        side=tk.LEFT,
+        padx=(0, 4)
+    )
+
+    delete_button = tk.Button(
+        actions,
+        text="Delete",
+        font=("Arial", 8),
+        bd=1,
+        relief=tk.SOLID,
+        bg="#F5F5F5",
+        command=lambda i=index: delete_transaction(i)
+    )
+
+    delete_button.pack(
         side=tk.RIGHT
     )
 
@@ -327,6 +1123,8 @@ def create_transaction(parent, transaction):
 
 def create_transactions_card(parent):
     """Creates the Recent Transactions section."""
+
+    global transactions_container
 
     card_transactions = tk.Frame(
         parent,
@@ -353,12 +1151,15 @@ def create_transactions_card(parent):
         pady=(0, 10)
     )
 
-    for transaction in transactions:
+    transactions_container = tk.Frame(
+        card_transactions,
+        bg="#FFFFFF"
+    )
 
-        create_transaction(
-            card_transactions,
-            transaction
-        )
+    transactions_container.pack(
+        fill=tk.BOTH,
+        expand=True
+    )
 
 
 # ============================================================
@@ -377,7 +1178,7 @@ def create_action_buttons(parent):
         relief=tk.SOLID,
         padx=15,
         pady=8,
-        command=add_expense
+        command=open_add_expense
     )
 
     add_button.pack(
@@ -421,7 +1222,9 @@ def create_main_content(parent):
         pady=20
     )
 
+    # --------------------------------------------------------
     # Left column
+    # --------------------------------------------------------
 
     left_column = tk.Frame(
         content,
@@ -435,7 +1238,9 @@ def create_main_content(parent):
         padx=(0, 20)
     )
 
+    # --------------------------------------------------------
     # Right column
+    # --------------------------------------------------------
 
     right_column = tk.Frame(
         content,
@@ -448,7 +1253,9 @@ def create_main_content(parent):
         anchor="n"
     )
 
+    # --------------------------------------------------------
     # Create sections
+    # --------------------------------------------------------
 
     create_total_card(left_column)
 
@@ -464,6 +1271,8 @@ def create_main_content(parent):
 def create_gui():
     """Creates and starts the Expense Tracker GUI."""
 
+    global root
+
     root = tk.Tk()
 
     root.title("Expense Tracker")
@@ -478,6 +1287,8 @@ def create_gui():
 
     create_main_content(root)
 
+    refresh_gui()
+
     root.mainloop()
 
 
@@ -487,4 +1298,3 @@ def create_gui():
 
 if __name__ == "__main__":
     create_gui()
-```
